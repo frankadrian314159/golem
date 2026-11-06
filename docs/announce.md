@@ -3,8 +3,7 @@
 **Title:** golem: a mock REST server generated from your Malli schemas or clojure.spec specs
 
 ---
-
-I've been annoyed for a while by how much hand-written fixture JSON a frontend needs before a backend exists, so I wrote **golem**: point it at your Malli schemas (or clojure.spec specs) and it serves a stateful REST API with generated data.
+A frontend needs large amounts of hand-written fixture JSON before a backend exists, so I wrote **golem**: point it at your Malli schemas (or clojure.spec specs) and it serves a stateful REST API with generated data.
 
 Repo: https://github.com/frankadrian314159/golem (MIT)
 
@@ -92,3 +91,4 @@ I'd particularly like to hear:
 - whether anyone would use this from Babashka alone, which would justify the http-kit rewrite
 
 Issues and PRs welcome. Thanks for reading.
+
