@@ -6,7 +6,7 @@
 
 I've been annoyed for a while by how much hand-written fixture JSON a frontend needs before a backend exists, so I wrote **golem**: point it at your Malli schemas (or clojure.spec specs) and it serves a stateful REST API with generated data.
 
-Repo: https://github.com/YOUR-USER/golem (MIT)
+Repo: https://github.com/frankadrian314159/golem (MIT)
 
 ## The simplest possible example
 
@@ -65,14 +65,14 @@ The spec support is a one-way converter to Malli forms, so everything after impo
 
 ## Limitations (please read before trying it)
 
-- **JVM only.** I'd have liked `bb mock-server` to run natively, but Jetty and Reitit don't run under Babashka. The `bb` tasks just shell out to the Clojure CLI. A pure-bb version would need http-kit and a different router.
+- **JVM only.** `bb mock-server -s schemas.edn -p 3000` works, but Babashka is only the launcher: Jetty and Reitit don't run under Babashka, so the task shells out to the Clojure CLI and the server runs on the JVM. A pure-bb version would need http-kit and a different router.
 - **No referential integrity.** Relationships are embedded copies or plain foreign-key fields. Generated foreign keys are random unless you constrain them (the examples use `[:int {:min 1 :max 5}]`), and deleting a record doesn't touch anything that mentions it.
 - **In memory only.** Nothing survives a restart. That's deliberate for fixtures, but it's a limit.
 - **Partial spec coverage.** Regex ops (`s/cat`, `s/*`), `s/merge`, multi-specs and arbitrary predicate functions fall back to `:any`.
 - **Filtering is basic.** Equality only. No sorting or ranges yet.
 - **Rough edges I know about:** integer id allocation isn't atomic, so two simultaneous POSTs can occasionally clash with a 409; non-numeric `limit`/`offset` give a 500; unknown JSON fields are silently dropped. They're all listed in `docs/devel/design-notes.md`.
 - **Custom value overrides** are only available when you start it from code (`golem.app/seed-db!`), not from the command line.
-- Young project: Clojure 1.12, Malli 0.16.4, tested on one machine (Windows 11, JDK 25).
+- Young project: Clojure 1.12, Malli 0.16.4, tested on one machine (Windows 11, JDK 25, Babashka 1.13.229).
 
 ## Why not X?
 
