@@ -1,0 +1,21 @@
+{:paths ["src"]
+ :tasks
+ {mock-server
+  {:doc "Boot the mock server: bb mock-server -s src/schemas.edn -p 3000 [--seed 42 --count 10]"
+   :requires ([babashka.process :as p])
+   :task (apply p/shell "clojure" "-M:run" *command-line-args*)}
+
+  blog
+  {:doc "Run the blog example (Malli) on port 3000"
+   :requires ([babashka.process :as p])
+   :task (apply p/shell "clojure" "-M:run" "-s" "examples/blog/schemas.edn" "-p" "3000" "--seed" "42" *command-line-args*)}
+
+  shop
+  {:doc "Run the shop example (clojure.spec) on port 3000"
+   :requires ([babashka.process :as p])
+   :task (apply p/shell "clojure" "-M:run" "--specs" "examples/shop/shop_specs.clj" "-p" "3000" "--seed" "42" *command-line-args*)}
+
+  test
+  {:doc "Run the test suite"
+   :requires ([babashka.process :as p])
+   :task (p/shell "clojure" "-M:test")}}}

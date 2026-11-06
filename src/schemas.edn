@@ -1,0 +1,28 @@
+;; Each top-level key is an entity; its value is a Malli :map schema, or
+;; {:schema <map-schema> :path "/custom" :id-key :id :expose? false}.
+;; Entities may refer to each other by keyword (:address) or, for recursive
+;; structures, with [:ref :entity]. Field names may be plain (:email) or
+;; namespaced (:user/email).
+{:address {:schema [:map
+                    [:street :string]
+                    [:city :string]
+                    [:zip [:string {:min 5 :max 5}]]]
+           :expose? false}
+
+ :user [:map
+        [:id :uuid]
+        [:name [:string {:min 1 :max 40}]]
+        [:email :string]
+        [:age {:optional true} [:int {:min 18 :max 99}]]
+        [:address :address]
+        [:created_at :string]
+        [:updated_at :string]]
+
+ :post [:map
+        [:id :int]
+        [:title [:string {:min 1 :max 80}]]
+        [:body :string]
+        [:author_id :uuid]
+        [:tags [:vector {:max 4} :string]]
+        [:published :boolean]
+        [:created_at :string]]}

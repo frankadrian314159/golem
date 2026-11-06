@@ -1,0 +1,2 @@
+-e
+(require 'golem.core-test) (let [r (clojure.test/run-tests 'golem.core-test)] (System/exit (if (clojure.test/successful? r) 0 1)))

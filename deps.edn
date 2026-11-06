@@ -1,0 +1,14 @@
+{:paths ["src"]
+ :deps {org.clojure/clojure {:mvn/version "1.12.0"}
+        metosin/malli {:mvn/version "0.16.4"}
+        org.clojure/test.check {:mvn/version "1.1.1"}
+        com.gfredericks/test.chuck {:mvn/version "0.2.15"}
+        metosin/reitit-ring {:mvn/version "0.7.2"}
+        metosin/jsonista {:mvn/version "0.3.11"}
+        ring/ring-core {:mvn/version "1.12.2"}
+        ring/ring-jetty-adapter {:mvn/version "1.12.2"}
+        org.babashka/cli {:mvn/version "0.8.61"}}
+ :aliases
+ {:run {:main-opts ["-m" "golem.main"]}
+  :test {:extra-paths ["test"]
+         :main-opts ["-e" "(require 'golem.core-test) (let [r (clojure.test/run-tests 'golem.core-test)] (System/exit (if (clojure.test/successful? r) 0 1)))"]}}}
