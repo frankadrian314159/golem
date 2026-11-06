@@ -76,7 +76,12 @@ The spec support is a one-way converter to Malli forms, so everything after impo
 
 ## Why not X?
 
-If you have an OpenAPI document, tools like Prism or json-server cover that well. golem is for when your source of truth is already Malli or spec in a Clojure codebase and you'd like the mock to follow it without writing a second description.
+There are good tools in this space already:
+
+- **[moclojer](https://github.com/moclojer/moclojer)** is the closest Clojure project. You write each endpoint and its canned response by hand in YAML or EDN (or import OpenAPI or Postman), and it replays them. It's a good fit when you want exact, hand-written responses. As far as I can tell from its README it doesn't generate data from schemas or keep state between requests, which is the gap golem aims at.
+- **Prism** and **[open-api-mocker](https://github.com/jormaechea/open-api-mocker)** mock from an OpenAPI document, and **json-server** serves a JSON file you maintain. If your contract already lives in OpenAPI, use those.
+
+golem is for when your source of truth is already Malli or spec in a Clojure codebase and you'd like the mock to follow it, with generated, stateful data, without writing a second description. I looked for an existing Clojure project that does this and didn't find one, but I may well have missed something, so please point me at it if you know of one.
 
 ## Feedback
 
