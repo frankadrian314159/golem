@@ -57,7 +57,7 @@ The spec support is a one-way converter to Malli forms, so everything after impo
 
 ## Size
 
-| | files | lines | code lines* |
+| folder | files | lines | code lines* |
 |---|---|---|---|
 | `src/` (Clojure) | 7 | 666 | 586 |
 | `test/` | 2 | 161 | 141 |
