@@ -5,6 +5,8 @@
 ---
 A frontend needs large amounts of hand-written fixture JSON before a backend exists, so I wrote **golem**: point it at your Malli schemas (or clojure.spec specs) and it serves a stateful REST API with generated data.
 
+N.B. Yes, I used Claude Sonnet 5.5 to write this. No, I'm not ashamed. It works and the entire project was cranked out in less than three hours of wall-clock time. Anyone who doesn't use this kind of force multiplier for tooling is foolish.
+
 Repo: https://github.com/frankadrian314159/golem (MIT)
 
 ## The simplest possible example
