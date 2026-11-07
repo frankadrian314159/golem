@@ -88,6 +88,7 @@ This produces a `:user` entity with routes and an embedded `:address` (it has no
 | `#(re-matches #"…" %)` | `:re` (a string regex) |
 | `seq` / `not-empty` inside `s/and` with `string?` | `:string` with min length 1 |
 | a nested `s/keys` spec that is an entity | a reference to that entity |
+| a key named `<entity>_id` whose type matches that entity's id | a foreign key: seeded with real ids (see [Foreign keys](schemas.md#foreign-keys)) |
 | a nested `s/keys` spec that is not in the namespace | an inline `:map` |
 
 ### What does not convert

@@ -38,14 +38,37 @@
         over (apply-overrides (or overrides default-overrides) raw)]
     (if (m/validate schema over) over raw)))
 
+(defn link-foreign-keys
+  "Replaces the value of every foreign-key field (see :fks on the entity) with an
+  id drawn from pool ({target-entity [id ...]}). Draws come from a Random seeded
+  with seed, so the result is repeatable. Fields whose target has no ids yet, and
+  nil values, are left alone; if the linked item no longer satisfies the schema
+  the original is returned."
+  [{:keys [schema fks]} pool seed item]
+  (if (empty? fks)
+    item
+    (let [rnd (java.util.Random. seed)
+          linked (walk/postwalk
+                  (fn [x]
+                    (if (and (map-entry? x) (some? (val x)) (or (keyword? (key x)) (string? (key x))))
+                      (let [ids (some->> (get fks (name (key x))) (get pool) seq vec)]
+                        (if ids
+                          (MapEntry. (key x) (nth ids (.nextInt rnd (count ids))))
+                          x))
+                      x))
+                  item)]
+      (if (m/validate schema linked) linked item))))
+
 (defn generate-items
-  "n deterministic items for an entity: same seed => same data."
-  [{:keys [name id-key id-type] :as e} {:keys [seed count] :or {seed 0 count 5} :as opts}]
+  "n deterministic items for an entity: same seed => same data. opts may carry
+  :pool {entity [id ...]} of already-seeded ids for foreign keys to point at."
+  [{:keys [name id-key id-type] :as e} {:keys [seed count pool] :or {seed 0 count 5} :as opts}]
   (let [base (+ seed (hash (clojure.core/name name)))]
     (->> (range count)
          (map (fn [i]
-                (cond-> (generate-item e (+ base i) opts)
-                  (contains? #{:int 'int?} id-type) (assoc id-key (inc i)))))
+                (->> (cond-> (generate-item e (+ base i) opts)
+                       (contains? #{:int 'int?} id-type) (assoc id-key (inc i)))
+                     (link-foreign-keys e pool (+ base i)))))
          (reduce (fn [[seen out] item]
                    (let [id (str (get item id-key))]
                      (if (seen id) [seen out] [(conj seen id) (conj out item)])))

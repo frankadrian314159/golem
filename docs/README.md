@@ -1,6 +1,6 @@
 # golem user guide
 
-golem turns your data schemas into a running mock REST API. You describe your entities once (with Malli schemas or `clojure.spec` specs) and golem serves them with realistic, repeatable fake data, validates what clients send, and remembers changes in memory until you stop it.
+golem turns your data schemas into a running mock REST API. You describe your entities once (with Malli schemas or `clojure.spec` specs) and golem serves them with realistic, repeatable fake data, validates what clients send, and remembers changes in memory until you stop it (or, with `--persist`, in a file between runs).
 
 ## Contents
 
@@ -23,4 +23,4 @@ Working on golem itself? See the [developer guide](devel/README.md).
 2. For every entity it generates a few records from the schema, using a seed so the same seed always gives the same data.
 3. It serves `GET/POST /things` and `GET/PUT/PATCH/DELETE /things/:id` for each entity.
 4. Incoming JSON is checked against the schema. Bad input gets a `400` with readable messages.
-5. All data lives in memory. Restarting the server resets it to the freshly generated data.
+5. All data lives in memory. Restarting the server resets it to the freshly generated data, unless you start with `--persist file.edn`. `POST /_reset` regenerates it on demand, and `GET /_openapi` describes the API for other tools.

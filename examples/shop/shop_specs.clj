@@ -1,7 +1,7 @@
 ;; Shop API defined with clojure.spec: customers, products and orders.
 ;; Orders embed line items (no id, so they get no endpoints of their own).
-;; Foreign keys are limited to 1..5 so they point at real records when the
-;; server runs with the default --count 5.
+;; customer_id and product_id are foreign keys by name, so seeded orders point
+;; at customers and products that exist for any --count.
 (ns shop.specs
   (:require [clojure.spec.alpha :as s]))
 
@@ -10,7 +10,7 @@
 (s/def ::city string?)
 (s/def ::address (s/keys :req-un [::street ::city]))
 
-(s/def ::product_id (s/int-in 1 6))
+(s/def ::product_id pos-int?)
 (s/def ::quantity (s/int-in 1 10))
 (s/def ::line-item (s/keys :req-un [::product_id ::quantity]))
 
@@ -34,7 +34,7 @@
 (s/def ::product (s/keys :req-un [::id ::sku ::title ::price ::category ::in_stock]))
 
 ;; order
-(s/def ::customer_id (s/int-in 1 6))
+(s/def ::customer_id pos-int?)
 (s/def ::items (s/coll-of ::line-item :min-count 1 :max-count 3))
 (s/def ::status #{"pending" "paid" "shipped"})
 (s/def ::order (s/keys :req-un [::id ::customer_id ::items ::status ::created_at]))

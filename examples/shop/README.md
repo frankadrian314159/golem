@@ -15,7 +15,7 @@ clojure -M:run --specs examples/shop/shop_specs.clj -p 3000 --seed 42
 | `/products`, `/products/:id` | `::product` (SKU pattern, price range, category) |
 | `/orders`, `/orders/:id` | `::order` (embeds a list of line items) |
 
-`::address` and `::line-item` have no `id`, so they are embedded objects and get no endpoints. `customer_id` and `product_id` are limited to `1..5`, so with the default `--count 5` they point at records that exist.
+`::address` and `::line-item` have no `id`, so they are embedded objects and get no endpoints. `customer_id` and `product_id` are recognised as [foreign keys](../../docs/schemas.md#foreign-keys) by name (including `product_id` inside the line items), so seeded orders point at records that exist, whatever `--count` is.
 
 ## Try it
 

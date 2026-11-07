@@ -24,6 +24,13 @@ All tests live in `test/golem/core_test.clj`:
 | `spec-refinements` | `s/int-in`, `seq` on strings, no warnings |
 | `blog-example`, `shop-example` | both examples boot, serve every collection, validate and mutate |
 | `recursive-entities` | `[:ref :entity]` builds, generates, and accepts nested POST bodies |
+| `foreign-keys-detected` | explicit `:golem/ref`, `false` opt-out, naming convention, type mismatch, keys inherited from embedded entities |
+| `seeded-foreign-keys-point-at-real-records`, `foreign-key-seeding-is-deterministic` | seeded keys exist in the target entity across several seeds; same seed gives the same links |
+| `nested-foreign-keys-and-dependency-order` | the shop example: targets seeded first, keys inside line items linked |
+| `mutually-dependent-entities-still-seed` | a foreign-key cycle does not break seeding |
+| `reset-endpoint` | `POST /_reset` restores, reseeds with `?seed=`, rejects bad seeds, absent without seed options |
+| `persistence-round-trip` | autosave writes every change; `load!` restores uuids and all |
+| `openapi-document` | paths, schema `$ref`s resolve, legal component names, patch has no required fields, recursion, `/_reset` listed |
 
 `test/golem/example_specs.clj` holds the spec fixtures and a `schemas` var used by the Malli-var test.
 

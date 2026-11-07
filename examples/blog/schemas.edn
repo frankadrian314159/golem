@@ -1,6 +1,6 @@
 ;; Blog API: authors, posts and comments, linked by integer foreign keys.
-;; Foreign keys are limited to 1..5 so they point at real records when the
-;; server runs with the default --count 5.
+;; author_id and post_id are foreign keys by name (<entity>_id with the entity's
+;; id type), so seeded data points at records that exist for any --count.
 {:author [:map
           [:id :int]
           [:name [:string {:min 1 :max 30}]]
@@ -10,7 +10,7 @@
 
  :post [:map
         [:id :int]
-        [:author_id [:int {:min 1 :max 5}]]
+        [:author_id :int]
         [:title [:string {:min 1 :max 60}]]
         [:body :string]
         [:status [:enum "draft" "published" "archived"]]
@@ -23,7 +23,7 @@
 
  :comment [:map
            [:id :int]
-           [:post_id [:int {:min 1 :max 5}]]
+           [:post_id :int]
            [:author_name [:string {:min 1 :max 30}]]
            [:text [:string {:min 1 :max 200}]]
            [:created_at :string]]}

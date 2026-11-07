@@ -44,7 +44,7 @@ The merged record is validated. Read the `errors` object: it names the field and
 Filters compare text exactly, and are case sensitive. Check the spelling, and use dots for nested fields (`address.city`).
 
 **Records I created disappeared**
-Data is held in memory and resets on restart. For stable fixtures, use `--seed` and `--count`.
+Data is held in memory and resets on restart unless you start with `--persist file.edn`. For stable fixtures, use `--seed` and `--count`, and `POST /_reset` to get back to them.
 
 **Browser blocks the call**
 Responses carry permissive CORS headers. Confirm you are calling the right port, and the request is going to golem and not your frontend dev server.

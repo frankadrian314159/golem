@@ -75,6 +75,26 @@ For a structure that refers to itself, use `[:ref …]` and give it a way to end
 
 A bare reference to itself (`:comment` inside `:comment`) overflows the stack when golem builds the schema, so always use `[:ref …]` for recursion.
 
+## Foreign keys
+
+A field holding another entity's id is a **foreign key**. Seeded data makes sure it points at a record that exists, instead of a random value. golem recognises a foreign key in two ways:
+
+```clojure
+[:author_id {:golem/ref :user} :uuid]   ; explicit: any field name, any entity
+[:author_id :uuid]                      ; by convention, if an exposed :author entity has a :uuid id
+[:authorId :uuid]                       ; ditto (<entity>_id and <entity>Id)
+[:author_id {:golem/ref false} :uuid]   ; opt out of the convention
+```
+
+The convention needs an exposed entity named like the prefix, and the same type for the field and that entity's id. Foreign keys inside embedded entities (an order's line items holding `product_id`) count for the entities that embed them. clojure.spec sources use the convention only, since spec keys have nowhere to carry the property.
+
+How it behaves:
+
+- Entities are seeded in dependency order (products before the orders that refer to them). If two entities refer to each other, one of them is seeded first and its keys are left as generated.
+- Which record a key points at is drawn from the seed, so the same seed gives the same links.
+- If the field's own constraints rule the real id out (for example `[:int {:min 1 :max 5}]` with `--count 20`), the generated value is kept.
+- Only seeding is affected. POST, PUT and PATCH accept any value that satisfies the schema, and deleting a record does not touch records that refer to it.
+
 ## Field names
 
 Plain (`:email`) and namespaced (`:user/email`) keys both work. With namespaced keys the JSON field is `"user/email"`, which is awkward in a frontend, so plain keys are usually nicer. Field-name based behaviour (value overrides, filtering) ignores the namespace.

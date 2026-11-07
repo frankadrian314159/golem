@@ -55,7 +55,7 @@ Things to try:
 
 ## Foreign keys
 
-Neither example enforces referential integrity: golem stores embedded copies and plain fields, not links. The examples keep references valid by limiting foreign keys to `1..5` (`[:int {:min 1 :max 5}]`, or `s/int-in 1 6`), which matches the ids of the five records created with the default `--count 5`. If you raise `--count`, widen those ranges too. See the [API notes](api.md#things-to-know).
+Both examples rely on the `<entity>_id` naming convention (see [Foreign keys](schemas.md#foreign-keys)): seeded `author_id`, `post_id`, `customer_id` and `product_id` values point at records that exist, for any `--count`. Writes are not checked, so a POST can still reference a missing record, and deleting a record leaves references behind. See the [API notes](api.md#things-to-know).
 
 ## Using an example as a starting point
 

@@ -54,7 +54,8 @@
     (when-not (= :map (m/type schema))
       (throw (ex-info (str "Entity " name " must be a :map schema") {:entity name})))
     (let [entries (vec (for [[k props child] (m/children schema)]
-                         {:key k :optional? (boolean (:optional props)) :type (m/type child)}))
+                         (cond-> {:key k :optional? (boolean (:optional props)) :type (m/type child)}
+                                   (contains? props :golem/ref) (assoc :ref (:golem/ref props)))))
           id-key (or id-key (->> entries (map :key) (filter #(= "id" (clojure.core/name %))) first))]
       (assoc e
              ;; no id => embedded value object, no routes or seeded records
@@ -64,6 +65,42 @@
              :id-key id-key
              :id-type (:type (some #(when (= id-key (:key %)) %) entries))
              :refs (disj (:refs e) name)))))
+
+;; ---- foreign keys ----------------------------------------------------------
+
+(defn- own-fks
+  "Field name -> target entity for this entity's own fields. A field is a foreign
+  key when it carries {:golem/ref :entity} (false opts out), or when it is named
+  <entity>_id / <entity>Id for an exposed entity whose id has the same type."
+  [entities {:keys [name entries]}]
+  (into {}
+        (keep (fn [{:keys [key ref type]}]
+                (let [fname (clojure.core/name key)
+                      base (second (re-matches #"(.+?)(?:_id|Id)" fname))
+                      auto (when base
+                             (let [t (get entities (keyword base))]
+                               (when (and t (:expose? t) (not= name (:name t))
+                                          (= type (:id-type t)))
+                                 (:name t))))
+                      target (cond (false? ref) nil
+                                   (keyword? ref) (when (get-in entities [ref :expose?]) ref)
+                                   :else auto)]
+                  (when (and target (not= target name)) [fname target]))))
+        entries))
+
+(defn- add-fks
+  "Adds :fks {field-name target-entity} to every entity. Foreign keys of embedded
+  entities (e.g. line items inside an order) count for the entities that embed them."
+  [entities]
+  (let [own (into {} (map (fn [[k e]] [k (own-fks entities e)])) entities)
+        closure (fn closure [seen k]
+                  (if (seen k)
+                    {}
+                    (apply merge (get own k)
+                           (map #(closure (conj seen k) %) (:refs (get entities k))))))]
+    (into (array-map)
+          (map (fn [[k e]] [k (assoc e :fks (closure #{} k))]))
+          entities)))
 
 (defn build
   "defs: {entity-name schema-or-config}. Returns {:registry reg :entities {name entity}}."
@@ -80,7 +117,7 @@
         reg (mr/composite-registry m/default-registry
                                    (merge forms (update-keys forms qualify)))]
     {:registry reg
-     :entities (into (array-map) (map (fn [[k e]] [k (describe reg known e)])) normalized)}))
+     :entities (add-fks (into (array-map) (map (fn [[k e]] [k (describe reg known e)])) normalized))}))
 
 (defn load-file-defs [path]
   (edn/read-string (slurp path)))

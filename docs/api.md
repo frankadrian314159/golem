@@ -15,6 +15,8 @@ All request and response bodies are JSON. Send `Content-Type: application/json`.
 | PATCH | `/users/:id` | 200, object | partial update |
 | DELETE | `/users/:id` | 204, no body | remove |
 | GET | `/_schemas` | 200, array | describe entities |
+| GET | `/_openapi` | 200, object | OpenAPI 3.1 document |
+| POST | `/_reset` | 200, object | regenerate the seed data |
 | OPTIONS | any | 204 | CORS preflight |
 
 The collection path defaults to the pluralised entity name (`:category` gives `/categories`, `:box` gives `/boxes`) and can be set per entity with `:path`.
@@ -28,11 +30,11 @@ GET /users?address.city=Leeds&role=admin
 GET /posts?published=true&limit=10&offset=20
 ```
 
-- Any query parameter other than `limit` and `offset` is an **equality filter** on the field with that name. Matching compares text, so `age=30`, `published=true` and ids all work as written.
+- Any query parameter other than `limit` and `offset` is an **equality filter** on the field with that name. Repeat a filter to match either value (`?priority=low&priority=high`). A filter on a field the schema doesn't define is a `400`, so typos don't look like empty results. Matching compares text, so `age=30`, `published=true` and ids all work as written.
 - Use dots to reach nested fields: `address.city`.
 - Field names match regardless of namespace (`email` matches `:user/email`).
 - Several filters combine with AND.
-- `limit` and `offset` take whole numbers. Records come back in creation order.
+- `limit` and `offset` take non-negative whole numbers (anything else is a `400`). Records come back in creation order.
 - A filter that matches nothing returns `[]`.
 
 ## Creating (POST)
@@ -55,7 +57,7 @@ The body must be a complete, valid record. The id always comes from the URL, wha
 
 ## Partial update (PATCH)
 
-Send only the fields to change. Objects are **merged deeply**, so `{"address":{"city":"York"}}` changes the city and leaves the rest of the address alone. Arrays and scalar values are replaced. The id cannot be changed. The merged result is validated; if it is invalid nothing changes and you get a `400`. `404` if the record does not exist.
+Send only the fields to change. Objects are **merged deeply**, so `{"address":{"city":"York"}}` changes the city and leaves the rest of the address alone. Arrays and scalar values are replaced. A `null` **removes** the field (JSON Merge Patch, RFC 7396); if removing it would make the record invalid but storing `null` would not (a required nullable field), the `null` is stored instead. The id cannot be changed. The merged result is validated; if it is invalid nothing changes and you get a `400`. `404` if the record does not exist.
 
 ## Deleting
 
@@ -68,6 +70,56 @@ curl localhost:3000/_schemas
 ```
 
 Returns one object per entity with its `entity` name, `path`, whether it is `exposed`, the entities it references (`refs`), and the Malli `schema` as data. Useful for generating frontend types.
+
+## OpenAPI: `/_openapi`
+
+```sh
+curl localhost:3000/_openapi > openapi.json
+```
+
+Returns an OpenAPI 3.1 document generated from the schemas: every exposed entity's collection and item operations, the entity schemas under `components.schemas` (entity references and `[:ref …]` recursion become `$ref`s), `limit`/`offset` and one equality-filter query parameter per top-level scalar field, and the error shape. Feed it to Swagger UI, a client generator or a contract tester. Constraints Malli can express (`:min`, `:max`, enums, formats such as `uuid`) are carried over; PATCH bodies are the entity schema without its required top-level fields.
+
+From code: `(golem.openapi/openapi registry {:title "My API" :version "1.0.0"})` returns the document as a map.
+
+## Resetting: `/_reset`
+
+```sh
+curl -X POST localhost:3000/_reset              # same seed: back to the starting data
+curl -X POST 'localhost:3000/_reset?seed=7'     # a different set of starting data
+```
+
+Empties every entity and regenerates it with the startup `--count` and `--size`, then responds `{"status":"reset","seed":7}`. Useful between test runs. A non-numeric `seed` gives `400`. With `--persist` the file is rewritten too. The route exists when the server is started with `golem.main/start!` (the command line does this); a handler built with `make-handler` and no seed options does not serve it.
+
+## Keeping data between runs
+
+```sh
+clojure -M:run -s src/schemas.edn --seed 42 --persist data/state.edn
+```
+
+- If the file exists, its contents become the data and nothing is generated (`--seed` then only affects later `/_reset` calls).
+- Otherwise golem generates data as usual and writes the file.
+- The file is rewritten after every change, so a crash loses nothing that was acknowledged.
+- Delete the file, or call `POST /_reset`, to go back to generated data.
+- The file is plain EDN. If you edit your schemas, delete the file: golem does not re-validate a snapshot it loads.
+
+## Simulating slow and failing servers
+
+For testing loading, error and login states. All off by default, and none of it applies to `/_…` routes or to CORS preflight requests.
+
+| Option | Effect |
+|---|---|
+| `--delay 300` / `--delay 200-800` | every request waits that many milliseconds (a random time in the range) |
+| `--error-rate 0.1` | that fraction of requests get a `500`, `502`, `503` or `504` with `{"error":"simulated server error"}`. The sequence follows `--seed` |
+| `--auth` / `--auth s3cret` | requests need `Authorization: Bearer <token>`. No token: `401` with `WWW-Authenticate: Bearer`. With a token given, a different one: `403`. Without a value, any token is accepted |
+
+You can also force a failure on a single request, whatever the options, with a header or a query parameter. The status must be 400 to 599:
+
+```sh
+curl -H "X-Golem-Status: 503" localhost:3000/todos
+curl "localhost:3000/todos?_status=429"
+```
+
+From code, pass the same settings as the fourth argument of `golem.app/make-handler`: `{:strict? true :delay [200 800] :error-rate 0.1 :auth "s3cret"}`.
 
 ## Value formats
 
@@ -89,6 +141,9 @@ Errors are JSON objects with an `error` message.
 | 400 | body is not valid JSON | `{"error":"invalid JSON body"}` |
 | 400 | body is not a JSON object | `{"error":"body must be a JSON object"}` |
 | 400 | body does not match the schema | `{"error":"validation failed","errors":{…}}` |
+| 400 | bad `limit`/`offset`, or a filter on a field the schema doesn't have | `{"error":"limit must be a non-negative whole number"}` |
+| 400 | unknown JSON field, with `--strict` | `{"error":"validation failed","errors":{"bogus":["disallowed key"]}}` |
+| 401 / 403 | `--auth`: no Bearer token / wrong token | `{"error":"authentication required"}` |
 | 404 | unknown path or record | `{"error":"not found"}` |
 | 405 | method not supported on that path | `{"error":"method not allowed"}` |
 | 409 | POST with an id that already exists | `{"error":"already exists"}` |
@@ -109,6 +164,6 @@ Validation errors are keyed by field, with human-readable messages, and nest for
 
 ## Things to know
 
-- Data is **in memory only**. A restart returns to the originally generated records.
-- Relationships are embedded copies, not live links. Changing a user does not update posts that mention it, and deleting a record does not cascade.
+- Data is **in memory only** unless you start with `--persist`. A restart otherwise returns to the originally generated records.
+- Relationships are embedded copies or plain foreign-key fields, not live links. Changing a user does not update posts that mention it, and deleting a record does not cascade. Foreign keys only point at real records in the *generated* data.
 - There is no authentication.

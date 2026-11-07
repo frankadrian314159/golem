@@ -2,7 +2,9 @@
 ;; {:schema <map-schema> :path "/custom" :id-key :id :expose? false}.
 ;; Entities may refer to each other by keyword (:address) or, for recursive
 ;; structures, with [:ref :entity]. Field names may be plain (:email) or
-;; namespaced (:user/email).
+;; namespaced (:user/email). A field is a foreign key when it carries
+;; {:golem/ref :entity}, or is named <entity>_id with the entity's id type;
+;; seeded data then points at real records.
 {:address {:schema [:map
                     [:street :string]
                     [:city :string]
@@ -22,7 +24,7 @@
         [:id :int]
         [:title [:string {:min 1 :max 80}]]
         [:body :string]
-        [:author_id :uuid]
+        [:author_id {:golem/ref :user} :uuid]
         [:tags [:vector {:max 4} :string]]
         [:published :boolean]
         [:created_at :string]]}

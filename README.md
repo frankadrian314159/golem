@@ -24,6 +24,12 @@ Requires the Clojure CLI and a JVM. Babashka is optional and only launches the J
 | `--seed` | Seed for generated data; same seed gives same data | random (printed at startup) |
 | `--count` | Records generated per entity | `5` |
 | `--size` | Generator size (larger gives bigger values) | `10` |
+| `--persist` | EDN file to keep the data in: loaded at startup if it exists, rewritten after every change | off |
+| `--strict` | Reject unknown JSON fields with a `400` instead of silently dropping them | off |
+| `--watch` | Reload the schema/spec file when it changes (data is re-seeded; with `--persist` existing data is kept and only new entities are seeded; a broken file keeps the old schemas) | off |
+| `--delay` | Simulated latency in ms: `300`, or a random range `200-800` | off |
+| `--error-rate` | Fraction (0 to 1) of requests that fail with a random 500/502/503/504; repeatable with `--seed` | off |
+| `--auth [token]` | Require `Authorization: Bearer <token>`: `401` if missing, and with a token given `403` if it doesn't match | off |
 
 At least one of `--schemas` or `--specs` is required; both can be given and are merged.
 
@@ -68,6 +74,8 @@ For an exposed entity at `/users`:
 | PATCH | `/users/:id` | Deep-merge a partial update, then re-validate |
 | DELETE | `/users/:id` | Remove; 204 |
 | GET | `/_schemas` | Introspect entities, paths, references and schema forms |
+| GET | `/_openapi` | OpenAPI 3.1 description of the whole API, generated from the schemas |
+| POST | `/_reset` | Discard all changes and regenerate the seed data (`?seed=N` to use a different seed) |
 
 Invalid input returns `400` with Malli's human-readable errors, for example `{"error":"validation failed","errors":{"email":["missing required key"]}}`. Unknown records return `404`, duplicate ids `409`. CORS headers are sent on every response.
 
@@ -77,7 +85,9 @@ Invalid input returns `400` with Malli's human-readable errors, for example `{"e
 
 Data comes from `malli.generator` (test.check) and is fully determined by `--seed`. Field-name overrides keep values realistic: `email` becomes a valid-looking address and the timestamp fields become ISO-8601 instants (see `default-overrides` in `src/golem/gen.clj`). Integer ids are sequential. Regex schemas (`[:re …]`) generate through `test.chuck`.
 
-State lives in a single in-memory atom and resets on restart; every mutation is re-validated against the entity's schema.
+**Foreign keys:** a field marked `{:golem/ref :user}`, or named `<entity>_id` / `<entity>Id` for an entity with the same id type, is seeded with ids of records that exist (entities are seeded in dependency order). See [Defining schemas](docs/schemas.md#foreign-keys).
+
+State lives in a single in-memory atom and resets on restart unless you pass `--persist file.edn`; every mutation is re-validated against the entity's schema.
 
 ## Development
 
@@ -87,6 +97,7 @@ clojure -M:test      # run the tests
 
 | Namespace | Role |
 |---|---|
+| `golem.openapi` | OpenAPI document generated from the registry |
 | `golem.import` | Load Malli or spec sources into entity definitions |
 | `golem.registry` | Central Malli registry; detects ids and entity references |
 | `golem.gen` | Seeded generation and field overrides |

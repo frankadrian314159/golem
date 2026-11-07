@@ -26,7 +26,7 @@ The first run downloads dependencies, which can take a minute. When it is ready 
 Mock server on http://localhost:3000  (seed 42, reuse with --seed 42)
   /users  [GET POST]   /users/:id  [GET PUT PATCH DELETE]
   /posts  [GET POST]   /posts/:id  [GET PUT PATCH DELETE]
-  /_schemas  [GET]
+  /_schemas  [GET]   /_openapi  [GET]   /_reset  [POST]
 ```
 
 If you do not pass `--seed`, golem picks a random one and prints it. Pass that number later to get the same data again.
@@ -41,6 +41,14 @@ If you do not pass `--seed`, golem picks a random one and prints it. Pass that n
 | `--seed` | Number that fixes the generated data | random |
 | `--count` | Records generated per entity | `5` |
 | `--size` | Generator size. Larger values give longer strings and bigger collections | `10` |
+| `--persist` | Path of an EDN file that keeps the data between runs (see [Keeping data between runs](api.md#keeping-data-between-runs)) | off |
+| `--strict` | Reject unknown JSON fields with a `400` instead of silently dropping them | off |
+| `--watch` | Reload the schema/spec file when it changes (data is re-seeded; with `--persist` existing data is kept and only new entities are seeded; a broken file keeps the old schemas) | off |
+| `--delay` | Simulated latency in ms: `300`, or a random range `200-800` | off |
+| `--error-rate` | Fraction (0 to 1) of requests that fail with a random 500/502/503/504; repeatable with `--seed` | off |
+| `--auth [token]` | Require `Authorization: Bearer <token>`: `401` if missing, and with a token given `403` if it doesn't match | off |
+
+`--delay`, `--error-rate` and `--auth` are for testing how a frontend copes; see [Simulating slow and failing servers](api.md#simulating-slow-and-failing-servers).
 | `-h`, `--help` | Show usage | |
 
 You must supply `--schemas`, `--specs`, or both. See [Importing](importing.md).

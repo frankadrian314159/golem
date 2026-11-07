@@ -45,9 +45,10 @@ That gives you `GET/POST /todos` and `GET/PUT/PATCH/DELETE /todos/:id`. There ar
 
 - **Schemas in:** Malli from an `.edn` file, a `.clj` file, or an `ns/var`; or clojure.spec from a namespace or file. Entities refer to each other by keyword (`[:address :address]`), and recursive ones with `[:ref :comment]`.
 - **Data out:** records are generated with `malli.generator` (so test.check underneath). `--seed 42` gives the same data every time, so a team can share one command line and see identical records. A few field names get nicer values (`email` becomes an `@example.com` address, `created_at` an ISO timestamp), and you can add your own overrides.
-- **State:** an atom. POST, PUT, PATCH (deep merge) and DELETE work and persist until you restart. Every write is re-validated against the schema.
+- **State:** an atom. POST, PUT, PATCH (deep merge) and DELETE work and persist until you restart (or forever with `--persist file.edn`). `POST /_reset` regenerates the seed data. Every write is re-validated against the schema.
 - **Validation:** bad input gets a 400 with Malli's humanized errors. Ids and `created_at`/`updated_at` are filled in for you; other missing required fields are rejected rather than invented.
-- **Extras:** equality filters including nested paths (`?address.city=Leeds`), `limit`/`offset`, CORS headers, and `GET /_schemas` to see what it understood.
+- **Testing aids:** `--delay 200-800` for latency, `--error-rate 0.1` for random 5xx, `--auth` for a fake Bearer check, `X-Golem-Status: 503` (or `?_status=503`) to fail one request, `--strict` to reject unknown fields, and `--watch` to reload the schema file when it changes.
+- **Extras:** equality filters including nested paths (`?address.city=Leeds`), `limit`/`offset`, CORS headers, `GET /_schemas` to see what it understood, and `GET /_openapi` for an OpenAPI 3.1 description generated from your schemas. Fields marked `{:golem/ref :user}` (or named `user_id`) are seeded with ids of records that exist.
 
 ## How it's built
 
@@ -59,19 +60,18 @@ The spec support is a one-way converter to Malli forms, so everything after impo
 
 | folder | files | lines | code lines* |
 |---|---|---|---|
-| `src/` (Clojure) | 7 | 666 | 586 |
-| `test/` | 2 | 161 | 141 |
+| `src/` (Clojure) | 8 | 946 | 840 |
+| `test/` | 2 | 288 | 254 |
 
-\* excluding blank and comment-only lines. 11 tests, 52 assertions. They call the Ring handler directly and include a run of both bigger examples. There are also user docs and a short developer guide under `docs/`.
+\* excluding blank and comment-only lines. 19 tests, 101 assertions. They call the Ring handler directly and include a run of both bigger examples. There are also user docs and a short developer guide under `docs/`.
 
 ## Limitations (please read before trying it)
 
 - **JVM only.** `bb mock-server -s schemas.edn -p 3000` works, but Babashka is only the launcher: Jetty and Reitit don't run under Babashka, so the task shells out to the Clojure CLI and the server runs on the JVM. A pure-bb version would need http-kit and a different router.
-- **No referential integrity.** Relationships are embedded copies or plain foreign-key fields. Generated foreign keys are random unless you constrain them (the examples use `[:int {:min 1 :max 5}]`), and deleting a record doesn't touch anything that mentions it.
-- **In memory only.** Nothing survives a restart. That's deliberate for fixtures, but it's a limit.
+- **Referential integrity is seed-time only.** Seeded foreign keys point at real records, but writes aren't checked and deleting a record doesn't touch anything that mentions it.
+- **In memory by default.** `--persist file.edn` keeps state between runs by rewriting the whole file after each change, which is fine for fixtures but not for big data.
 - **Partial spec coverage.** Regex ops (`s/cat`, `s/*`), `s/merge`, multi-specs and arbitrary predicate functions fall back to `:any`.
 - **Filtering is basic.** Equality only. No sorting or ranges yet.
-- **Rough edges I know about:** integer id allocation isn't atomic, so two simultaneous POSTs can occasionally clash with a 409; non-numeric `limit`/`offset` give a 500; unknown JSON fields are silently dropped. They're all listed in `docs/devel/design-notes.md`.
 - **Custom value overrides** are only available when you start it from code (`golem.app/seed-db!`), not from the command line.
 - Young project: Clojure 1.12, Malli 0.16.4, tested on one machine (Windows 11, JDK 25, Babashka 1.13.229).
 

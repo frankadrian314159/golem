@@ -21,13 +21,18 @@ A map of entity name to either a Malli form or a config map:
 | `:form` | the Malli form it was built from |
 | `:schema` | compiled `m/schema` using the shared registry |
 | `:path` | collection route, e.g. `"/users"` |
-| `:entries` | `[{:key k :optional? bool :type malli-type} ...]`, one per map field |
+| `:entries` | `[{:key k :optional? bool :type malli-type :ref target} ...]`, one per map field (`:ref` only if the field carries `:golem/ref`) |
 | `:id-key` | the field that identifies a record, or `nil` |
 | `:id-type` | the Malli type of the id field (`:int`, `:uuid`, …) |
 | `:expose?` | true only if requested **and** the entity has an id key |
 | `:refs` | set of other entity names mentioned in the form |
+| `:fks` | `{"field-name" target-entity}`: foreign-key fields, own and inherited from embedded entities, computed by `registry/add-fks` after every entity is described |
 
 Rules enforced in `describe`: an entity must be a `:map` schema (otherwise an `ex-info` naming the entity). An entity without an id key is an embedded value object: `:expose?` becomes false, so it gets no routes and no seeded records.
+
+### Foreign keys
+
+`add-fks` runs once all entities are described. `own-fks` marks a field when it has `{:golem/ref :target}` (target must be exposed; `false` opts out) or is named `<entity>_id` / `<entity>Id` for an exposed entity whose `:id-type` equals the field's type. The `:fks` map of an entity is its own plus those of every entity in its `:refs`, transitively, so fields in embedded value objects count. `gen/link-foreign-keys` then replaces matching fields anywhere in a generated item (matching on the field name) with ids from the `:pool` that `app/seed-db!` builds as it seeds entities in `app/seed-order`.
 
 ### Registry and references
 

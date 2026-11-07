@@ -15,7 +15,7 @@ clojure -M:run -s examples/blog/schemas.edn -p 3000 --seed 42
 | `/posts`, `/posts/:id` | `:post` (status enum, tag list, nested `stats`) |
 | `/comments`, `/comments/:id` | `:comment` |
 
-Relationships are plain integer fields (`post.author_id`, `comment.post_id`) limited to `1..5`, so with the default `--count 5` they always point at a record that exists.
+Relationships are plain integer fields (`post.author_id`, `comment.post_id`). golem recognises them as [foreign keys](../../docs/schemas.md#foreign-keys) from their names, so seeded posts and comments always point at records that exist, whatever `--count` is.
 
 ## Try it
 

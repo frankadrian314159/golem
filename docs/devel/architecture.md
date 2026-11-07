@@ -28,11 +28,12 @@ schema file / ns ──► golem.import ──► defs {entity form}
 | `golem.registry` | `src/golem/registry.clj` | Build the shared Malli registry and describe each entity (path, id key, entries, references). |
 | `golem.gen` | `src/golem/gen.clj` | Seeded generation with `malli.generator`, plus field-name overrides. |
 | `golem.store` | `src/golem/store.clj` | In-memory CRUD over one atom; validates every write. |
+| `golem.openapi` | `src/golem/openapi.clj` | Build the OpenAPI 3.1 document for `GET /_openapi` from the registry (uses `malli.json-schema`). |
 | `golem.hydrate` | `src/golem/hydrate.clj` | Fills server-owned fields (ids, timestamps) before validation. |
 | `golem.app` | `src/golem/app.clj` | Reitit routes, Ring middleware, JSON handling, error mapping. |
 | `golem.main` | `src/golem/main.clj` | CLI parsing (`babashka.cli`), startup, Jetty. |
 
-Dependencies point downward: `main` uses `app`, `import`, `registry`, `store`; `app` uses `gen`, `hydrate`, `store`; nothing depends on `main`.
+Dependencies point downward: `main` uses `app`, `import`, `registry`, `store`; `app` uses `gen`, `hydrate`, `openapi`, `store`; nothing depends on `main`.
 
 ## Startup sequence
 
@@ -40,9 +41,9 @@ Dependencies point downward: `main` uses `app`, `import`, `registry`, `store`; `
 
 1. `golem.import/load-defs` reads `:schemas` (Malli) and/or `:specs` (spec) and merges them. Spec conversion warnings travel as `{:warnings [...]}` metadata on the returned map; `start!` prints them.
 2. `golem.registry/build` creates a composite registry (`m/default-registry` plus one entry per entity form), then `describe`s each entity.
-3. `golem.store/create-db` makes the atom.
-4. `golem.app/seed-db!` generates `count` records for each exposed entity and inserts them.
-5. `golem.app/make-handler` builds the Ring handler and `ring.adapter.jetty/run-jetty` serves it. It returns `{:server :db :seed :registry :port}` so tests and REPL users can stop the server and inspect state.
+3. `golem.store/create-db` makes the atom. With `:persist`, `store/load!` restores a snapshot if the file exists.
+4. Unless a snapshot was restored, `golem.app/seed-db!` generates `count` records for each exposed entity and inserts them, in dependency order (`app/seed-order`), passing the ids of already-seeded entities as a `:pool` so foreign keys point at real records. `store/autosave!` then watches the atom and rewrites the snapshot on every change.
+5. `golem.app/make-handler` (given the seed options, so `POST /_reset` can reseed) builds the Ring handler and `ring.adapter.jetty/run-jetty` serves it. It returns `{:server :db :seed :registry :port}` so tests and REPL users can stop the server and inspect state.
 
 `-main` only parses arguments and prints the endpoint list; everything else is in `start!` so it is testable.
 
@@ -76,7 +77,7 @@ Each exposed entity contributes routes from `entity-routes`:
 - **`wrap-encode-output`**: for 2xx responses encodes the stored Clojure values back to JSON forms (UUID, dates) with `m/encode`, for both single records and lists.
 - **PATCH** has no input middleware. The handler decodes the partial body and `store/patch!` validates the merged result, so an invalid patch raises `ex-info {:type :invalid}`, which `wrap-exceptions` turns into a `400`.
 
-There is also `GET /_schemas` (`meta-routes`), which reports each entity's path, references and schema form.
+`meta-routes` adds `GET /_schemas` (each entity's path, references and schema form), `GET /_openapi` and, when seed options were given, `POST /_reset`.
 
 ## Error flow
 

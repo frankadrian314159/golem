@@ -48,6 +48,10 @@ To add your own field-name overrides (names, cities and the like) see [Embedding
 
 Integer ids are numbered `1..count`. UUID and string ids are generated; duplicates are dropped, so you may get slightly fewer records than `--count` for a very small id type (such as a tightly bounded string).
 
+## Foreign keys
+
+Fields recognised as foreign keys (see [Foreign keys](schemas.md#foreign-keys)) are filled with the ids of seeded records of the target entity, so `GET /posts` returns posts whose `author_id` matches a real user. Targets are seeded first, and the choice of record is part of the seeded randomness.
+
 ## Optional fields
 
 `{:optional true}` fields appear in some records and not in others, so your frontend sees both shapes.

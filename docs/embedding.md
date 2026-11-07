@@ -13,7 +13,7 @@ You can start golem from a REPL or a test instead of the command line. This also
 (.stop (:server system))
 ```
 
-`start!` accepts `:schemas`, `:specs`, `:port`, `:seed`, `:count` and `:size`, the same as the command-line flags.
+`start!` accepts `:schemas`, `:specs`, `:port`, `:seed`, `:count`, `:size` and `:persist`, the same as the command-line flags.
 
 ## Assembling the pieces yourself
 
@@ -31,6 +31,14 @@ You can start golem from a REPL or a test instead of the command line. This also
   (def handler (app/make-handler reg db)))
 
 (jetty/run-jetty handler {:port 3000 :join? false})
+```
+
+Pass the seeding options as a third argument to also serve `POST /_reset`, which regenerates the data with them:
+
+```clojure
+(let [opts {:seed 7 :count 10 :size 10}]
+  (app/seed-db! db reg opts)
+  (def handler (app/make-handler reg db opts)))
 ```
 
 `handler` is an ordinary Ring handler. You can call it directly in tests without starting a server:
@@ -60,6 +68,17 @@ Rules:
 - The function receives the generated string and must return the replacement. Derive it from the input (as above) so the same seed gives the same data.
 - It only applies to string values.
 - The replacement must still satisfy the schema; otherwise golem keeps the original generated record.
+
+## Persistence and OpenAPI from code
+
+```clojure
+(store/save! db "state.edn")        ; write a snapshot
+(store/load! db "state.edn")        ; => true, or nil if the file does not exist
+(store/autosave! db "state.edn")    ; rewrite the file after every change
+
+(require '[golem.openapi :as openapi])
+(openapi/openapi reg {:title "Shop" :version "2.0.0"})   ; => OpenAPI 3.1 map
+```
 
 ## Working with the data directly
 
